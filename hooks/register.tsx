@@ -5,7 +5,7 @@ import { atom, read, update } from 'claude-code'
 import type { Register } from 'claude-code'
 
 import type { Label } from '../types'
-import { DEFAULT_URL, metka, probe, start, urlOf } from './setup'
+import { DEFAULT_URL, metka, minConfidence, probe, skipDescription, start, urlOf } from './setup'
 
 const labels = atom({ plugin: 'metka', key: 'labels' } as const, {} as Record<string, Label>, { shape: 'labels-1' })
 const ARGS_MAX = 3000
@@ -116,7 +116,7 @@ function setLabel($: any, id: string, label: Label) {
 // Asks for one state's label and keeps it under the call's id. The running label streams into the row; a past one
 // replaces the running one only when it is whole. Resolves to the label, or undefined when there is none to show.
 async function label($: any, options: any, id: string, command: string, state: State, running?: string) {
-  const min = Number(options.minConfidence ?? 0.15)
+  const min = await minConfidence($, options)
   await starting
   const url = await urlOf($, options)
   const streams = state === 'running'
@@ -152,7 +152,7 @@ async function label($: any, options: any, id: string, command: string, state: S
 export const register: Register = (on, options) => {
   // The installed server is started when nothing answers; with none, a first session says how to get one.
   on('session.start', async ($, e, next) => {
-    await $.command.register({ name: 'metka', description: 'Set up or check where Bash labels come from' })
+    await $.command.register({ name: 'metka', description: 'Set up Metka, the Bash labeller: install, server, settings, status', argumentHint: '[status|stop]' })
     void (async () => {
       const url = await urlOf($, options)
       if ((await probe($, url)).ok) return
@@ -167,11 +167,11 @@ export const register: Register = (on, options) => {
     return next(e)
   })
 
-  on('command.run', { command: 'metka' }, async $ => ({ text: await metka($, options) }))
+  on('command.run', { command: 'metka' }, async ($, e) => ({ text: await metka($, options, e.args) }))
 
   on('tool.describe', { tool: 'Bash' }, async ($, e, next) => {
     const described = await next(e)
-    return options.skipDescription ? { ...described, description: described.description + SKIP_LINE } : described
+    return (await skipDescription($, options)) ? { ...described, description: described.description + SKIP_LINE } : described
   })
 
   on('tool.call', { tool: 'Bash' }, async ($, e, next) => {

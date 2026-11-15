@@ -1,27 +1,7 @@
 {
   "name": "metka",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Short labels for Bash commands from Metka, a small local model, written over the command as it runs",
   "license": "Apache-2.0",
-  "types": "./types/index.d.ts",
-  "userConfig": {
-    "url": {
-      "type": "string",
-      "title": "Labeller server",
-      "description": "A llama-server, or any server with the OpenAI completions API, serving a Metka model",
-      "default": "http://127.0.0.1:11500"
-    },
-    "minConfidence": {
-      "type": "number",
-      "title": "Least confidence",
-      "description": "A label whose least likely word is under this probability is cut back or not shown (0 turns it off)",
-      "default": 0.15
-    },
-    "skipDescription": {
-      "type": "boolean",
-      "title": "Ask Claude to skip descriptions",
-      "description": "Tell the model to leave out Bash's description field, which Metka's label replaces; saves output tokens",
-      "default": true
-    }
-  }
+  "types": "./types/index.d.ts"
 }

@@ -4,7 +4,7 @@ Short labels for Claude Code's Bash commands, written by [Metka](https://hugging
 
 The Bash row shows the command greyed out while Metka's label writes itself over it. When the command ends, the label turns into its past tense, or into "Failed to ..." with a red dot. ctrl+o shows the full command as usual.
 
-By default the plugin also asks Claude to leave out Bash's `description` field, since Metka's label takes its place. That saves Claude writing a description for every command. Turn it off in the plugin's settings (`Ask Claude to skip descriptions`) to keep Claude's own descriptions.
+By default the plugin also asks Claude to leave out Bash's `description` field, since Metka's label takes its place. That saves Claude writing a description for every command. To keep Claude's own descriptions, turn it off in `/metka` → **Settings**.
 
 Claude reads its tool instructions once, at the start of a conversation, and again only after a compaction. So in a conversation that was already open when you installed the plugin (or changed this setting), Claude keeps writing descriptions until the next compaction or a new conversation. The labels themselves work right away.
 
@@ -27,7 +27,7 @@ Then run `/metka` and pick **Install it here**. It asks which model and, on Linu
 
 The install works on Linux (x64 and arm64) and macOS. Elsewhere, run a server yourself (below).
 
-`/metka` also shows the status, and switches between the installed server and one of your own.
+`/metka` also has the settings and the status, and switches between the installed server and one of your own. `/metka status` and `/metka stop` work without the questions.
 
 ## Your own server
 
@@ -43,13 +43,12 @@ The plugin uses `curl` to stream labels as they are written, so curl has to be o
 
 ## Settings
 
-In `/config`, under the plugin:
+In `/metka` → **Settings**:
 
 | Setting | Default | What it does |
 |---|---|---|
-| Labeller server | `http://127.0.0.1:11500` | Where the model is served; when changed here, it wins over the one picked in `/metka` |
 | Least confidence | `0.15` | A label whose least likely word is less probable than this is cut back to its confident start, or the row keeps the command; `0` turns it off |
-| Ask Claude to skip descriptions | on | Tell Claude to leave out Bash's `description` field (from the next conversation or compaction) |
+| Descriptions | leave out | Whether Claude is asked to leave out Bash's `description` field (from the next conversation or compaction) |
 
 If the server doesn't answer, the plugin says so once a session and leaves the rows as they are.
 

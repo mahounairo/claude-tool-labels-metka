@@ -30,7 +30,17 @@ async function home($: any) {
   return `${await $.env.get('HOME')}/.claude/metka`
 }
 
-// The address labels are asked at: one set in /config wins, then one chosen in /metka, then the installed server's.
+// The settings /metka keeps in the plugin's store. Options the plugin is loaded with (pluginConfigs, for a plugin
+// loaded from a folder) win.
+export async function minConfidence($: any, options: any) {
+  return Number(options.minConfidence ?? (await $.store.get('minConfidence')) ?? 0.15)
+}
+
+export async function skipDescription($: any, options: any) {
+  return Boolean(options.skipDescription ?? (await $.store.get('skipDescription')) ?? true)
+}
+
+// The address labels are asked at: one in settings.json wins, then one chosen in /metka, then the installed server's.
 export async function urlOf($: any, options: any) {
   const set = String(options.url || '').replace(/\/+$/, '')
   if (set && set !== DEFAULT_URL) return set
@@ -155,19 +165,39 @@ async function own($: any) {
   return `Labels now come from ${url}${found.model ? ` (${found.model})` : ''}.`
 }
 
+async function settings($: any, options: any) {
+  const now = await minConfidence($, options)
+  const keep = `Keep ${now}`
+  const cut = await $.ui.ask(`Least confidence: a label whose least likely word is less probable than this is cut back to its confident start, or the row keeps the command. Now ${now}; 0 shows every label. Pick one or type a number below.`,
+    { header: 'Confidence', options: [keep, ...['0.15', '0'].filter(v => Number(v) !== now)] })
+  if (cut !== keep) {
+    const value = Number(cut)
+    if (!Number.isFinite(value) || value < 0 || value > 1) return `"${cut}" is not a number from 0 to 1; nothing changed.`
+    await $.store.set('minConfidence', value)
+  }
+  const skip = await $.ui.ask("Ask Claude to leave out Bash's description field, which the label replaces? It saves Claude writing one for every command, and reaches Claude with the next conversation or compaction.",
+    { header: 'Descriptions', options: ['Yes, leave it out', 'No, keep descriptions'] })
+  await $.store.set('skipDescription', skip.startsWith('Yes'))
+  return `Least confidence ${await minConfidence($, options)}; Claude ${(await skipDescription($, options)) ? 'leaves out' : 'keeps'} Bash descriptions.`
+}
+
 async function status($: any, options: any) {
   const url = await urlOf($, options)
   const found = await probe($, url)
   const server = (await $.store.get('server')) as Server | undefined
   return [
     `Labels come from ${url}: ${found.ok ? `up${found.model ? ` (${found.model})` : ''}` : 'not answering'}.`,
-    server && url === DEFAULT_URL ? `Installed here: ${server.model.split('/').pop()} on the ${server.gpu ? 'GPU' : 'CPU'}, started by the first session that needs it.` : '',
+    server && url === DEFAULT_URL ? `Installed here: ${server.model.split('/').pop()} on the ${server.gpu ? 'GPU' : 'CPU'}, started by the first session that needs it. /metka stop stops it.` : '',
+    `Least confidence ${await minConfidence($, options)}; Claude ${(await skipDescription($, options)) ? 'leaves out' : 'keeps'} Bash descriptions.`,
   ].filter(Boolean).join('\n')
 }
 
-export async function metka($: any, options: any) {
-  const installed = Boolean(await $.store.get('server'))
-  const choices = ['Install it here', 'Use my own server', 'Status', ...(installed ? ['Stop the server'] : [])]
+// /metka asks what to do; /metka status and /metka stop answer at once.
+export async function metka($: any, options: any, args = '') {
+  const word = args.trim().toLowerCase()
+  if (word === 'stop') return stop($)
+  if (word === 'status') return status($, options)
+  const choices = ['Install it here', 'Use my own server', 'Settings', 'Status']
   let pick: string
   try {
     pick = await $.ui.ask('Metka writes the labels. Where should it run?', { header: 'Metka', options: choices })
@@ -177,7 +207,7 @@ export async function metka($: any, options: any) {
   try {
     if (pick === choices[0]) return await install($)
     if (pick === choices[1]) return await own($)
-    if (pick === 'Stop the server') return await stop($)
+    if (pick === choices[2]) return await settings($, options)
     return await status($, options)
   } catch {
     return 'Nothing changed.'

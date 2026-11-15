@@ -55,13 +55,16 @@ test('an unsure label leaves the row as it was', async ($, on) => {
   await ui.unmount()
 })
 
-test('Bash is told to leave descriptions out', async ($, on) => {
+test('Bash is told to leave descriptions out, unless /metka settings say keep them', async ($, on) => {
+  const kept = store(on)
   on('tool.describe', (_$, e) => ({ description: e.description }))
-  const d = await $.tool.describe({ tool: 'Bash', description: 'Runs a command.', provider: { plugin: 'engine', tier: 'core' } } as any)
-  expect(d.description).toContain('Leave out the `description` parameter')
+  const describe = () => $.tool.describe({ tool: 'Bash', description: 'Runs a command.', provider: { plugin: 'engine', tier: 'core' } } as any)
+  expect((await describe()).description).toContain('Leave out the `description` parameter')
+  kept.set('skipDescription', false)
+  expect((await describe()).description).toBe('Runs a command.')
 })
 
-test('labels come from the address chosen in /metka unless /config names another', async ($, on) => {
+test('labels come from the address chosen in /metka', async ($, on) => {
   store(on, new Map([['url', 'http://192.0.2.10:8080/']]))
   const asked: string[] = []
   on('process.spawn', async function* (_$: any, e: any) {
