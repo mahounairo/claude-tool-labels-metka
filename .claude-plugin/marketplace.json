@@ -1,0 +1,12 @@
+{
+  "name": "metka",
+  "owner": {
+    "name": "mahounairo"
+  },
+  "plugins": [
+    {
+      "name": "metka",
+      "source": "./"
+    }
+  ]
+}
